@@ -4,10 +4,14 @@ import tweepy
 from dotenv import load_dotenv
 
 load_dotenv()
+client = tweepy.Client(
+    consumer_key=os.getenv("CONSUMER_KEY"),
+    consumer_secret=os.getenv("CONSUMER_SECRET"),
+    access_token=os.getenv("ACCESS_TOKEN"),
+    access_token_secret=os.getenv("ACCESS_TOKEN_SECRET")
+)
 
-client = tweepy.Client(os.getenv('BEARER_TOKEN'))
-user = client.get_user(username='MulherDoDia')
-tweets = client.get_users_tweets(user.data.id)
+user = client.get_user(username='MulherDoDia', user_auth=True)
 
 
 FILE_NAME = 'last_seen_id.txt'
@@ -28,12 +32,17 @@ def store_last_seen_id(last_seen_id, file_name):
 
 
 last_seen_id = retrieve_last_seen_id(FILE_NAME)
-mentions = client.get_users_mentions(user.data.id, since_id=last_seen_id)
+mentions = client.get_users_mentions(user.data.id, since_id=last_seen_id, user_auth=True)
 
-for data in reversed(mentions.data):  # reversed is for responding the older mentions first.
-    print(str(data.id) + '---' + data.text)
-    last_seen_id = data.id
-    store_last_seen_id(last_seen_id, FILE_NAME)
-    if '@MulherDoDia' in data.text:
+if mentions.data is not None:
+    print(mentions.data)
+    for data in reversed(mentions.data):  # reversed is for responding the older mentions first.
+        print(str(data.id) + '---' + data.text)
+        last_seen_id = data.id
+        store_last_seen_id(last_seen_id, FILE_NAME)
         print('Found MulherDoDia!')
         print('Responding back...')
+        client.create_tweet(in_reply_to_tweet_id=last_seen_id, text='Testing', user_auth=True)
+else:
+    print('No new tweets have been found.')
+
